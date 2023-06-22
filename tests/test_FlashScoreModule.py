@@ -23,7 +23,6 @@ def open_necessary_page() -> webdriver:
         match.click()
         windows = driver.get_driver.window_handles
         driver.get_driver.switch_to.window(windows[1])
-        driver.click_xpath(TabXpath.STATISTIC_BUTTON)
         return driver, season_name
 
 
@@ -49,7 +48,23 @@ def test_get_all_statistics_game():
                         'total_transmissions': ('Всего передач', '456', '432')}
 
     driver, season_name = open_necessary_page()
+    driver.click_xpath(TabXpath.STATISTIC_BUTTON)
     result = FlashScore.get_all_statistics_game(driver)
-
+    driver.close_driver()
     assert result == necessary_result
     assert season_name == 'Премьер-лига 2022/2023'
+
+
+def test_get_review_game():
+    necessary_result = {
+        'first_time_score': ['3', '0'],
+        'red_cards': 0,
+        'second_time_score': ['2', '0'],
+        'substitution': 10,
+        'yellow_cards': 0,
+    }
+
+    driver, season_name = open_necessary_page()
+    result = FlashScore.get_review_game(driver)
+    driver.close_driver()
+    assert result == necessary_result

@@ -111,3 +111,13 @@ class SeleniumDriver:
             self.while_not_element(xpath)
 
         return driver.find_elements(by=By.XPATH, value=xpath)
+
+    def get_text_or_null(self, xpath: str, pause: int = 1) -> list:
+        """
+        Get text from xpath or '' if xpath not find
+        """
+
+        if self.xpath_checker(xpath=xpath, pause=pause):
+            return self.get_elements(xpath=xpath, while_not_element=False)
+
+        return []

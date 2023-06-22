@@ -68,3 +68,10 @@ class TableResultsXpaths:
     DESCR_DANGEROUS_ATTACKS = '//*[@id="detail"]/div[9]/div[15]/div[1]/div[2]'
     DANGEROUS_ATTACKS_FIRST = '//*[@id="detail"]/div[9]/div[15]/div[1]/div[1]'
     DANGEROUS_ATTACKS_SECOND = '//*[@id="detail"]/div[9]/div[15]/div[1]/div[3]'
+
+
+class ReviewGameXpath:
+    ALL_SCORE = '//*[@id="detail"]/div[9]/div/div[*]'
+    YELLOW_CARDS = '//*[@class="card-ico yellowCard-ico"]'
+    RED_CARDS = '//*[@class="card-ico redCard-ico"]'
+    SUBSTITUTION = '//*[@class="substitution "]'

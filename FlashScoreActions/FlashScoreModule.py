@@ -3,7 +3,7 @@ import time
 from config import settings as st
 from utils.basic_decorators import working_time
 from utils.SeleniumModule import SeleniumDriver
-from FlashScoreActions.FlashScoreXpaths import BasicXpaths, TableResultsXpaths as TabXpath
+from FlashScoreActions.FlashScoreXpaths import BasicXpaths, TableResultsXpaths as TabXpath, ReviewGameXpath
 
 
 class FlashScore:
@@ -147,6 +147,36 @@ class FlashScore:
 
         return result
 
+    @staticmethod
+    @working_time(active=st.work_time_methods)
+    def get_review_game(driver: SeleniumDriver) -> dict:
+        """
+        Get all info in review menu
+        """
+
+        all_score = driver.get_elements(ReviewGameXpath.ALL_SCORE)
+        yellow_cards = len(driver.get_text_or_null(ReviewGameXpath.YELLOW_CARDS))
+        red_cards = len(driver.get_text_or_null(ReviewGameXpath.RED_CARDS))
+        substitution = len(driver.get_text_or_null(ReviewGameXpath.SUBSTITUTION))
+        score = []
+
+        for row in all_score:
+            if 'тайм' in row.get_attribute('textContent').strip():
+                data = row.get_attribute('textContent').strip().split('тайм')
+                score.append((data[1].split(' - ')))
+
+        first_time_score, second_time_score = score[0], score[1]
+
+        result = {
+            'first_time_score': first_time_score,
+            'second_time_score': second_time_score,
+            'yellow_cards': yellow_cards,
+            'red_cards': red_cards,
+            'substitution': substitution,
+        }
+
+        return result
+
     @classmethod
     def __get_info_from_season(cls,
                                driver: SeleniumDriver,
@@ -168,7 +198,10 @@ class FlashScore:
             match.click()
             windows = driver.get_driver.window_handles
             driver.get_driver.switch_to.window(windows[1])
-            driver.click_xpath(TabXpath.STATISTIC_BUTTON)
+            # driver.click_xpath(TabXpath.STATISTIC_BUTTON)
+
+            cls.get_review_game(driver)
+            break
 
             import pprint
             main_info = cls.__get_main_info_match(driver)
