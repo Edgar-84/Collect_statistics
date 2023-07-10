@@ -7,6 +7,8 @@ from FlashScoreActions.FlashScoreXpaths import BasicXpaths, TableResultsXpaths a
 
 
 class FlashScore:
+    BLACK_LIST = ['Гол не засчитан - офсайд', 'Незабитый пенальти']
+
     @staticmethod
     def open_all_season_games(driver: SeleniumDriver):
         """
@@ -62,10 +64,6 @@ class FlashScore:
         """
         Get all the statistics for the game
         """
-        # data = [
-        #     ('expected_goals', TabXpath.DESCR_EXPECTED_GOALS, TabXpath.EXPECTED_GOALS_FIRST, TabXpath.EXPECTED_GOALS_SECOND),
-        #         ]
-        # result = {}
 
         descr_expected_goals = driver.get_text_xpath(TabXpath.DESCR_EXPECTED_GOALS)
         expected_goals_first = driver.get_text_xpath(TabXpath.EXPECTED_GOALS_FIRST)
@@ -147,34 +145,63 @@ class FlashScore:
 
         return result
 
-    @staticmethod
+    @classmethod
     @working_time(active=st.work_time_methods)
-    def get_review_game(driver: SeleniumDriver) -> dict:
+    def get_review_game(cls, driver: SeleniumDriver) -> dict:
         """
         Get all info in review menu
         """
+        first_time_score = None
+        second_time_score = None
+        info_goals = []
+        info_substitution = []
+        info_yellow_cards = []
 
-        all_score = driver.get_elements(ReviewGameXpath.ALL_SCORE)
-        yellow_cards = len(driver.get_text_or_null(ReviewGameXpath.YELLOW_CARDS))
-        red_cards = len(driver.get_text_or_null(ReviewGameXpath.RED_CARDS))
-        substitution = len(driver.get_text_or_null(ReviewGameXpath.SUBSTITUTION))
-        score = []
+        yellow_cards = driver.get_text_or_null(ReviewGameXpath.YELLOW_CARDS, pause=1.5)
+        red_cards = driver.get_text_or_null(ReviewGameXpath.RED_CARDS)
+        test_info = driver.get_elements('//*[@id="detail"]/div[9]/div/div[*]', while_not_element=False)
+        test_info = test_info if len(test_info) != 0 else driver.get_elements('//*[@id="detail"]/div[10]/div/div[*]',
+                                                                              while_not_element=False)
+        for row in test_info:
+            print('info')
+            info = row.text.split('\n')
+            print(info)
 
-        for row in all_score:
-            if 'тайм' in row.get_attribute('textContent').strip():
-                data = row.get_attribute('textContent').strip().split('тайм')
-                score.append((data[1].split(' - ')))
+            check_black_list = [text for text in cls.BLACK_LIST if text in ''.join(info)]
+            if len(check_black_list) > 0:
+                print(f'Find exception - {check_black_list}')
+                continue
 
-        first_time_score, second_time_score = score[0], score[1]
+            if '1-Й ТАЙМ' in info:
+                first_time_score = info[-1].split(' - ')
+
+            elif '2-Й ТАЙМ' in info:
+                second_time_score = info[-1].split(' - ')
+
+            elif '-' in info[1] and 5 <= len(info[1]) <= 7:
+                info_goals.append({'time': info[0].replace("'", ''),
+                                   'who_scored': info[2],
+                                   'game_score': info[1]})
+
+            elif len(info) == 3 and ('(' in info[2] and ')' in info[2] and info[2].count('.') == 0):
+                info_yellow_cards.append({'time': info[0].replace("'", ''),
+                                          'Person': info[1]})
+
+            elif len(info) == 3 and (info[1].count('.') in [1, 2] or info[1].count(',') in [1, 2]) == 1 or \
+                    (info[2].count('.') in [1, 2] or info[2].count(',') in [1, 2]):
+                info_substitution.append({'time': info[0].replace("'", ''),
+                                          'come': info[1],
+                                          'has_left': info[2]})
 
         result = {
             'first_time_score': first_time_score,
             'second_time_score': second_time_score,
-            'yellow_cards': yellow_cards,
-            'red_cards': red_cards,
-            'substitution': substitution,
+            'info_cards': {'red_cards': len(red_cards), 'yellow_cards': len(yellow_cards), 'info': info_yellow_cards},
+            'substitution': {'count': len(info_substitution), 'info': info_substitution},
+            'info_goals': {'count': len(info_goals), 'info': info_goals},
         }
-
+        import pprint
+        pprint.pprint(result)
         return result
 
     @classmethod
@@ -190,7 +217,7 @@ class FlashScore:
         season_name = season_obj.get_attribute('textContent').strip()
         season_obj.click()
         print(season_name)
-        # cls.open_all_season_games(driver)
+        cls.open_all_season_games(driver)
         matches = driver.get_elements('//*[@title="Подробности матча!"]')
         print(len(matches))
 
@@ -198,12 +225,13 @@ class FlashScore:
             match.click()
             windows = driver.get_driver.window_handles
             driver.get_driver.switch_to.window(windows[1])
-            # driver.click_xpath(TabXpath.STATISTIC_BUTTON)
+            driver.click_xpath(TabXpath.STATISTIC_BUTTON)
 
             cls.get_review_game(driver)
             break
 
             import pprint
+            driver.click_xpath(TabXpath.STATISTIC_BUTTON)
             main_info = cls.__get_main_info_match(driver)
             pprint.pprint(main_info)
 
